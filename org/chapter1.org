@@ -1,0 +1,234 @@
+#+TITLE: Building abstractions with procedures
+#+DATE: <2022-04-19 Tue>
+#+PROPERTY: header-args:racket :lang racket :exports both :results value
+
+* 1.1
+
+#+NAME: Exercise 1.1
+#+begin_src racket :lang racket
+10
+(+ 5 3 4)
+(- 9 1)
+(/ 6 2)
+(+ (* 2 4) (- 4 6))
+
+(define a 3)
+(define b (+ a 1))
+(+ a b (* a b))
+(= a b)
+
+(if (and (> b a) (< b (* a b)))
+    b
+    a)
+
+(cond ((= a 4) 6)
+      ((= b 4) (+ 6 7 a))
+      (else 25))
+
+(+ 2 (if (> b a) b a))
+
+(* (cond ((> a b) a)
+         ((< a b) b)
+         (else -1))
+   (+ a 1))
+#+end_src
+
+#+RESULTS: Exercise 1.1
+#+begin_example
+10
+12
+8
+3
+6
+19
+#f
+4
+16
+6
+16
+#+end_example
+
+* 1.2
+
+#+NAME: Exercise 1.2
+#+begin_src racket :lang racket
+(/ (+ 5 4 (- 2 (- 3 (+ 6 (/ 4 5))))) (* 3 (- 6 2) (- 2 7)))
+#+end_src
+
+#+RESULTS: Exercise 1.2
+: 4
+: 13
+
+* 1.3
+
+#+NAME: Exercise 1.3
+#+begin_src racket
+(define (square x) (* x x))
+(define (sum-square x y) (+ (square x) (square y)))
+
+(define (sum-square-two-largest x y z)
+  (cond [(and (> x y) (> z y)) (sum-square x z)]
+        [(and (> y x) (> z x)) (sum-square y z)]
+        [else (sum-square x y)]))
+
+(square 2)
+(sum-square 2 3)
+(sum-square-two-largest 1 2 3)
+(sum-square-two-largest 2 3 1)
+(sum-square-two-largest 3 2 1)
+(sum-square-two-largest 3 2 2)
+#+end_src
+
+#+RESULTS: Exercise 1.3
+: 4
+: 13
+: 13
+: 13
+: 13
+: 13
+
+* 1.4
+
+The model of evaluation allows for compound expressions. The following procedure will add =+ b= to a if =b= is a positive number, =-b= if it is a negative number. In other words, it adds the abolute value of =b= to =a=.
+
+#+NAME: Exercise 1.4
+#+begin_src racket
+(define (a-plus-abs-b a b) ((if (> b 0) + -) a b))
+
+(a-plus-abs-b 1 5)
+(a-plus-abs-b 1 -5)
+#+end_src
+
+#+RESULTS: Exercise 1.4
+: 6
+: 6
+
+* 1.5
+
+Ben Bitdiddle's test. If the interpreter uses applicative-order evaluation the interpreter will return 0; it will start evaluating =test= and since =x=0= will evaluate the left branch of the conditional and thus return =0=. An interpreter that uses normal-order evaluation will get in to an infinite loop---which Racket does.
+
+#+NAME: Exercise 1.5
+#+begin_src racket
+(define (p) (p))
+(define (test x y) (if (= x 0) 0 y))
+
+(test 0 (p))
+#+end_src
+
+We reproduce the square-root example as a prelude to Exercise 1.6.
+
+#+begin_src racket
+(define (square x) (* x x))
+(define (good-enough? guess x) (< (abs (- (square guess) x)) 0.001))
+(define (average x y) (/ (+ x y) 2))
+(define (improve guess x) (average guess (/ x guess)))
+(define (sqrt-iter guess x) (if (good-enough? guess x) guess (sqrt-iter (improve guess x) x)))
+(define (sqrt x) (sqrt-iter 1.0 x))
+
+(sqrt 9)
+(sqrt (+ 100 37))
+(sqrt (+ (sqrt 2) (sqrt 3)))
+(square (sqrt 1000))
+#+end_src
+
+#+RESULTS:
+: 3.00009155413138
+: 11.704699917758145
+: 1.7739279023207892
+: 1000.000369924366
+
+* TODO 1.6
+
+With Racket I give up after 20s of execution of the following code on my machine.
+
+#+RESULTS: Exercise 1.6
+#+begin_src racket
+(define (new-if predicate then-clause else-clause)
+  (cond (predicate then-clause)
+        (else else-clause)))
+
+(new-if (= 2 3) 0 5)
+(new-if (= 1 1) 0 5)
+
+(define (square x) (* x x))
+(define (good-enough? guess x) (< (abs (- (square guess) x)) 0.001))
+(define (average x y) (/ (+ x y) 2))
+(define (improve guess x) (average guess (/ x guess)))
+(define (sqrt-iter guess x)
+  (new-if (good-enough? guess x)
+          guess
+          (sqrt-iter (improve guess x) x)))
+
+(sqrt-iter 1. 3)
+#+end_src
+
+#+RESULTS:
+: 5
+: 0
+
+* TODO 1.7
+
+For small numbers we quickly run into an issue related to the precision specified in =good-enough=, as demonstrated by the following snippet:
+
+#+NAME: Exercise 1.7
+#+begin_src racket :session one-seven
+(define (square x) (* x x))
+(define (good-enough? guess x) (< (abs (- (square guess) x)) 0.001))
+(define (average x y) (/ (+ x y) 2))
+(define (improve guess x) (average guess (/ x guess)))
+(define (sqrt-iter guess x) (if (good-enough? guess x) guess (sqrt-iter (improve guess x) x)))
+(define (sqrt x) (sqrt-iter 1.0 x))
+
+(sqrt 0.0009)
+(good-enough? 1. 0.0009)
+(improve 1. 0.0009)
+(good-enough? 0.503 0.0009)
+(improve 0.503 0.0009)
+(good-enough? 0.2574642 0.0009)
+(improve 0.2574642 0.0009)
+(good-enough? 0.14038420541892813 0.0009)
+(improve  0.14038420541892813 0.0009)
+(good-enough? 0.07339759152251914 0.0009)
+(improve 0.07339759152251914 0.0009)
+(improve 0.04282978712848904 0.0009)
+(good-enough? 0.04282978712848904 0.0009)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+0.04030062264654547
+#f
+0.50045
+#f
+0.25239463220675945
+#f
+0.13047991581283921
+#f
+0.07339759152251914
+#f
+0.04282978712848904
+0.03192159999848393
+#t
+#+end_example
+
+On the other hand =sqrt= applied to very large number never converges due to numerical precision as illustrated by the following example:
+
+#+NAME: Exercise 1.7
+#+begin_src racket :session one-seven
+(define (square x) (* x x))
+(define (good-enough? guess x) (< (abs (- (square guess) x)) 0.001))
+(define (average x y) (/ (+ x y) 2))
+(define (improve guess x) (average guess (/ x guess)))
+(define (sqrt-iter guess x)
+  (if (good-enough? guess x)
+      guess
+      (begin
+        (display guess)
+        (newline)
+        (sqrt-iter (improve guess x) x))))
+(define (sqrt x) (sqrt-iter 1.0 x))
+
+; Will hang
+(sqrt 1010101010101010)
+#+end_src
+
